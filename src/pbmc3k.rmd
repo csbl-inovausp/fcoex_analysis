@@ -45,8 +45,6 @@ fc <- new_fcoex(data.frame(exprs),target)
 fc <- discretize(fc)
 
 fc <- find_cbf_modules(fc)
-fc <- get_nets(fc)
-
 fc <- recluster(fc)
 
 
@@ -67,18 +65,22 @@ The "show net"
 
 save_plots(name = "pbmc3k", fc, force = T, directory = "results/intermediate")
 library(patchwork)
+library(ggplot2)
+fc <- get_nets(fc, n = 2)
 
 coex_module_plots <- show_net(fc)
 
-coex_module_plots[sapply(coex_module_plots, is.null)] <- NULL
-wrap_plots(coex_module_plots)
+p_module_1 <- coex_module_plots[["HLA-DRB1"]] + theme(legend.position="none")
+
+
+p_module_2 <- coex_module_plots[["PTPRCAP"]] + theme(legend.position="none")
+
+p_module_1 + p_module_2
 ```
 
 Now that we have the modules, we would like to look at the reclusterings.
 
 For that, we will re-integrate the fcoex outputs with the Seurat object.
-
-
 
 
 ```{r Plotting the reclusterings}
@@ -103,10 +105,42 @@ Now the modules are inside the metadata of the Seurat object.
 
 ```{r}
 library(patchwork)
-p1 <- DimPlot(pbmc3k.final, group.by = "fcoex_TYROBP")
-p2 <- DimPlot(pbmc3k.final)
 
-p1 + p2
+recluster_theme <- function(){
+  theme(axis.title=element_blank(),
+        axis.line =element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank(),
+        legend.position = "none",
+        legend.direction = "vertical",
+        plot.title = element_text(hjust = 0.5, face = "plain", size = 20))
+}
+
+p1 <- DimPlot(pbmc3k.final) +
+    theme(# axis.title=element_blank(),
+        # axis.line =element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank(),
+       # legend.position = "none",
+        legend.direction = "vertical",
+        plot.title = element_text(hjust = 0.5, face = "plain", size = 25))+
+  ggtitle("pbmc3k")
+p2 <- DimPlot(pbmc3k.final, group.by = "fcoex_HLA.DRB1") + recluster_theme()
+p3 <- DimPlot(pbmc3k.final, group.by = "fcoex_PTPRCAP")+ recluster_theme()
+
+layout <- "
+##BBDD
+AABBDD
+AABBDD
+AACCEE
+AACCEE
+##CCEE
+"
+
+ggsave("../results/figures/fcoex_pipeline_pbmc3k.pdf", width = 14)
+p1 + p_module_1 + p_module_2 + p2 +p3 +  plot_layout(design = layout)
+dev.off()
+p1 + p_module_1 + p_module_2 + p2 +p3 +  plot_layout(design = layout)
 
 
 ```
@@ -117,15 +151,6 @@ Let's plot all divisions to make a "cluster forest".
 
 ```{r}
 
-recluster_theme <- function(){
-  theme(axis.title=element_blank(),
-        axis.line =element_blank(),
-        axis.text=element_blank(),
-        axis.ticks=element_blank(),
-        legend.position = "none",
-        legend.direction = "vertical",
-        plot.title = element_text(hjust = 0.5, face = "plain", size = 10))
-}
 
 plots <- list()
 
@@ -159,16 +184,12 @@ for (identity in levels(Idents(pbmc3k.final))){
   identity_metadata = metadata[metadata["seurat_annotations"] == identity,]
   
   proportions_for_this_identity = list()
-  print(identity)
 
   for (col_name in colnames(identity_metadata)){
     if (grepl("fcoex", col_name)){
       
       total_cells = nrow(identity_metadata)
       header_positive_cells = sum(identity_metadata[col_name] == "HP")
-      
-      print(total_cells)
-      print(header_positive_cells)
       proportions_for_this_identity[[col_name]] <- header_positive_cells/total_cells 
     }
   seurat_to_fcoex_proportions[[identity]] <- proportions_for_this_identity
@@ -213,7 +234,7 @@ prepare_proportions_df <-function(proportion_df){
 Now plotting it.
 
 ```{r}
-
+ggsave("../results/figures/fcoex_reclusterings_pbmc3k.pdf", width = 4, height= 4)
 proportions_df %>%
   prepare_proportions_df() %>%
   ggplot(aes_string(x="Seurat", y="fcoex", fill="proportion")) +
@@ -221,6 +242,7 @@ proportions_df %>%
     scale_fill_gradient(low = "white", high = "dodgerblue3") +
     theme_bw()+
     theme(axis.text.x = element_text(angle = 70, hjust = 1))
+dev.off()
 ```
 
 
