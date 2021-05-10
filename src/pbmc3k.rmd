@@ -78,6 +78,52 @@ p_module_2 <- coex_module_plots[["PTPRCAP"]] + theme(legend.position="none")
 p_module_1 + p_module_2
 ```
 
+Let's try and plot the modules in a different way. 
+
+
+```{r}
+library(patchwork)
+
+modules_to_filter <-module_genes(fc)
+
+heat_1 <- DoHeatmap(object = pbmc3k.final, 
+          slot = "data",
+          size = 5,
+          raster = FALSE,
+          features = c(modules_to_filter[["HLA-DRB1"]])) +
+      scale_fill_gradient(low = "white", high = "black")  +
+      theme(legend.position = "none",
+            axis.line.y = element_line()) +
+      ylab("M5 (HLA-DRB1)")
+
+
+heat_2 <- DoHeatmap(object = pbmc3k.final, 
+          label = FALSE,
+          slot = "data",
+          size = 5,
+          raster = FALSE,
+          features = c(modules_to_filter[["CD3D"]])) +
+      scale_fill_gradient(low = "white", high = "black")  +
+      theme(legend.position = "none",
+            axis.line.y = element_line()) +
+      ylab("M2 (CD3D)")
+
+
+heat_3 <- DoHeatmap(object = pbmc3k.final, 
+          label = FALSE,
+          slot = "data",
+          size = 5,
+          raster = FALSE,
+          features = c(modules_to_filter[["CST7"]])) +
+      scale_fill_gradient(low = "white", high = "black")  +
+      theme(legend.position = "none",
+            axis.line.y = element_line()) +
+      ylab("M8 (CST7)")
+
+p_heat <- (heat_1 / heat_2 / heat_3)
+p_heat
+```
+
 Now that we have the modules, we would like to look at the reclusterings.
 
 For that, we will re-integrate the fcoex outputs with the Seurat object.
@@ -104,11 +150,10 @@ print(head(pbmc3k.final@meta.data))
 Now the modules are inside the metadata of the Seurat object. 
 
 ```{r}
-library(patchwork)
 
 recluster_theme <- function(){
-  theme(axis.title=element_blank(),
-        axis.line =element_blank(),
+  theme(#axis.title=element_blank(),
+        #axis.line =element_blank(),
         axis.text=element_blank(),
         axis.ticks=element_blank(),
         legend.position = "none",
@@ -121,51 +166,31 @@ p1 <- DimPlot(pbmc3k.final) +
         # axis.line =element_blank(),
         axis.text=element_blank(),
         axis.ticks=element_blank(),
-       # legend.position = "none",
-        legend.direction = "vertical",
         plot.title = element_text(hjust = 0.5, face = "plain", size = 25))+
   ggtitle("pbmc3k")
-p2 <- DimPlot(pbmc3k.final, group.by = "fcoex_HLA.DRB1") + recluster_theme()
-p3 <- DimPlot(pbmc3k.final, group.by = "fcoex_PTPRCAP")+ recluster_theme()
+p2 <- DimPlot(pbmc3k.final, group.by = "fcoex_HLA.DRB1", cols = c("gray70", "black")) + 
+  recluster_theme() +
+  ggtitle("C5 (HLA-DRB1)")
+p3 <- DimPlot(pbmc3k.final, group.by = "fcoex_CD3D", cols = c("gray70", "black")) +
+  recluster_theme() +
+  ggtitle("C2 (CD3D)")
+p4 <- DimPlot(pbmc3k.final, group.by = "fcoex_CST7", cols = c("gray70", "black")) +
+  recluster_theme() +
+  ggtitle("C8 (CST7)")
 
 layout <- "
-##BBDD
-AABBDD
-AABBDD
-AACCEE
-AACCEE
-##CCEE
+AABBBCCDDEE
+AABBBCCDDEE
 "
 
-ggsave("../results/figures/fcoex_pipeline_pbmc3k.pdf", width = 14)
-p1 + p_module_1 + p_module_2 + p2 +p3 +  plot_layout(design = layout)
+ggsave("../results/figures/fcoex_pipeline_pbmc3k.pdf", width = 20, height = 7)
+p1 + p_heat + p2 + p3 +p4 + plot_layout(design = layout) 
 dev.off()
-p1 + p_module_1 + p_module_2 + p2 +p3 +  plot_layout(design = layout)
-
+p1 + p_heat + p2 + p3 +p4 + plot_layout(design = layout) 
 
 ```
 
 So we see that module one divides the dataset into myeloid (DC + Monocytes) and non-myeloid cells. Cool!
-
-Let's plot all divisions to make a "cluster forest".
-
-```{r}
-
-
-plots <- list()
-
-plots[["base"]] <- DimPlot(pbmc3k.final) + theme( legend.text = element_text(size=8))
-for (col_name in colnames(metadata)){
-  if (grepl("fcoex", col_name)){
-    plots[[col_name]] <- DimPlot(pbmc3k.final, group.by = col_name) + recluster_theme()
-  }
-  print(col_name)
-}
-# ggsave("../results/figures/cluster_forest_pbmc3k.pdf", width = 14)
-print(wrap_plots(plots))
-# dev.off()
-```
-Nice. With the cluster forest we can already get a few new perspectives on the dataset.
 
 Let's look at a heatmap and look in a different way how the coexpression clusters relate to the original labels.
 
@@ -239,7 +264,7 @@ proportions_df %>%
   prepare_proportions_df() %>%
   ggplot(aes_string(x="Seurat", y="fcoex", fill="proportion")) +
     geom_tile() +
-    scale_fill_gradient(low = "white", high = "dodgerblue3") +
+    scale_fill_gradient(low = "white", high = "purple3") +
     theme_bw()+
     theme(axis.text.x = element_text(angle = 70, hjust = 1))
 dev.off()
