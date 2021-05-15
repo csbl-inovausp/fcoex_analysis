@@ -9,7 +9,8 @@ To start, we will download and clean our datasets of interest.
 ```{r Downloading the data. , eval = FALSE }
 # devtools::install_github('satijalab/seurat-data')
 library('SeuratData')
-InstallData("pbmc3k.SeuratData")
+options(timeout=1000)
+InstallData("pbmc3k")
 ```
 
 
@@ -58,6 +59,17 @@ In my laptop, it takes 2-5 minutes to complete the run. Let's do some plotting.
 
 Of note, the current memory handling of the fcoex package is not very good: it takes around 8x the amount of memory of the Seurat object that it processes. For the pbmc3k dataset that is not a problem, but it make it necessary to usea server with more RAM for larger datasets.
 
+Let's save the fc object for the future:
+
+```{r Print the time taken}
+library(readr)
+write_rds(
+  x=fc,
+  file="../data/intermediate_data/fc_pbmc3k.rds",
+  compress = c("gz"))
+
+```
+
 The "save_plots" function saves the co-expression modules to a PDF file. 
 The "show net" 
 
@@ -66,7 +78,6 @@ The "show net"
 save_plots(name = "pbmc3k", fc, force = T, directory = "results/intermediate")
 library(patchwork)
 library(ggplot2)
-fc <- get_nets(fc, n = 2)
 
 coex_module_plots <- show_net(fc)
 
@@ -270,4 +281,52 @@ proportions_df %>%
 dev.off()
 ```
 
+
+Checking DEGs for some fcoex clusters
+
+```{r}
+markers_m5 <- FindMarkers(pbmc3k.final,
+                          ident.1 = "HP",
+                          group.by = "fcoex_HLA.DRB1",
+                          only.pos = TRUE) %>%
+              tibble::rownames_to_column(var = "gene")
+
+markers_m2 <- FindMarkers(pbmc3k.final,
+                      ident.1 = "HP",
+                      group.by = "fcoex_CD3D",
+                          only.pos = TRUE)  %>% 
+              tibble::rownames_to_column(var = "gene")
+
+markers_m7 <- FindMarkers(pbmc3k.final,
+                      ident.1 = "HP",
+                      group.by = "fcoex_CST7",
+                          only.pos = TRUE) %>% 
+              tibble::rownames_to_column(var = "gene")
+
+markers_m9 <- FindMarkers(pbmc3k.final,
+                      ident.1 = "HP",
+                      group.by = "fcoex_FCGR3A",
+                      only.pos = TRUE) %>% 
+                tibble::rownames_to_column(var = "gene")
+
+library("readr")
+write_tsv(markers_m5,
+          file = "results/markers_hla.tsv" )
+
+write_tsv(markers_m2,
+          file = "results/markers_cd3d.tsv" )
+
+write_tsv(markers_m7,
+          file = "results/markers_cst7.tsv" )
+
+write_tsv(markers_m9,
+          file = "results/markers_fcgr3a.tsv" )
+
+
+FeaturePlot(pbmc3k.final, features=rownames(head(markers_m9, 6)))
+
+
+
+
+```
 
