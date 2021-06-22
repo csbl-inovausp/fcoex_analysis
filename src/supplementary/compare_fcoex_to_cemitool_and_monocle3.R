@@ -5,6 +5,7 @@ library(Seurat)
 library(SeuratData)
 library(gridExtra)
 library(scales)
+library(patchwork)
 source("src/helpers.R")
 
 monocle3_modules <-
@@ -71,7 +72,22 @@ ggsave(
   height = 4
 )
 plot_proportions_df(proportions_df_monocle) + ylab("monocle3")
-
-
 dev.off()
 
+
+proportions_df_fcoex <-
+  get_proportions_df(pbmc3k.final, fc, algorithm_name = "fcoex")
+
+
+p1 <- plot_proportions_df(proportions_df_cemitool) + ylab("CEMiTool")
+p2 <- plot_proportions_df(proportions_df_monocle) + ylab("monocle3")
+p3 <- plot_proportions_df(proportions_df_fcoex) + ylab("fcoex")
+
+
+ggsave(
+  "results/supplementary/comparative_reclusterings_pbmc3k.pdf",
+  width = 12,
+  height = 4
+)
+p1 + p2 + p3 + plot_annotation(tag_levels = 'A')
+dev.off()
