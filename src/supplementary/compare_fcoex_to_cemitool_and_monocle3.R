@@ -13,7 +13,7 @@ monocle3_modules <-
 cemitool_modules <-
   readRDS(file = "data/intermediate_data/pbmc3k_modules_cemitool.rds")
 fc <- readRDS("./data/intermediate_data/fc_pbmc3k.rds")
-fcoex_modules <- fc@mod_idents
+fcoex_modules <- fc@module_list
 
 data("pbmc3k.final")
 # Add CEMiTool modules to fcoex object and recluster ------------
@@ -71,6 +71,9 @@ ggsave(
   width = 4,
   height = 4
 )
+
+
+# Plot comparison of proportions in relation to original labels --------
 plot_proportions_df(proportions_df_monocle) + ylab("monocle3")
 dev.off()
 
@@ -79,9 +82,9 @@ proportions_df_fcoex <-
   get_proportions_df(pbmc3k.final, fc, algorithm_name = "fcoex")
 
 
-p1 <- plot_proportions_df(proportions_df_cemitool) + ylab("CEMiTool")
-p2 <- plot_proportions_df(proportions_df_monocle) + ylab("monocle3")
-p3 <- plot_proportions_df(proportions_df_fcoex) + ylab("fcoex")
+p1 <- plot_proportions_df(proportions_df_cemitool) + ylab("CEMiTool") + theme(axis.title.y = element_blank())
+p2 <- plot_proportions_df(proportions_df_monocle) + ylab("monocle3") + theme(axis.title.y  = element_blank())
+p3 <- plot_proportions_df(proportions_df_fcoex) + ylab("fcoex") + theme(axis.title.y  = element_blank())
 
 
 ggsave(
@@ -91,3 +94,62 @@ ggsave(
 )
 p1 + p2 + p3 + plot_annotation(tag_levels = 'A')
 dev.off()
+
+
+# Plot module sizes --------
+
+module_sizes <- c(unlist(lapply(cemitool_modules, length)),
+  unlist(lapply(monocle3_modules,length)),
+  unlist(lapply(fcoex_modules,length))
+)
+
+
+module_origin <- factor(c(rep("CEMiTool", length(cemitool_modules)),
+                   rep("Monocle3", length(monocle3_modules)),
+                   rep("Fcoex", length(fcoex_modules))), levels=c("CEMiTool", "Monocle3", "Fcoex")
+)
+
+p4 <- data.frame(n=module_sizes, x=module_origin) %>% 
+  ggplot(aes(y=n, x=x, fill=x)) + 
+  geom_boxplot() +
+  ylab("Number of genes per module") +
+  xlab("Algorithm") +
+  scale_fill_manual(values= c("beige", "pink", "turquoise")) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1))
+
+
+ggsave( 
+  "results/supplementary/pbmc3k_genes_per_module_count.pdf",
+  width = 12,
+  height = 8
+)
+p4  +  theme(legend.position = "left")
+dev.off()
+
+
+layout <- '
+ABC
+D##
+'
+wrap_plots(p1, p2, p3, p4, design = layout) + plot_annotation(tag_levels = 'A')
+dev.off()
+
+
+
+ggsave( 
+  "results/supplementary/comparative_reclusterings_pbmc3k_with_count.pdf",
+  width = 12,
+  height = 8
+)
+
+layout <- '
+ABC
+D##
+'
+wrap_plots(p1, p2, p3, p4, design = layout) + plot_annotation(tag_levels = 'A')
+dev.off()
+
+
+

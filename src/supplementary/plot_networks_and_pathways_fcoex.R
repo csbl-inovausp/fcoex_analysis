@@ -9,7 +9,7 @@ fcoex_modules <- fc@mod_idents
 
 # Plot ggraph visualization of fcoex networks ---------
 
-fc <- get_nets(fc, n = 8, min_elements = 1)
+fc <-  (fc, n = 8, min_elements = 1)
 list_of_network_plots  = list()
 
 temp <- show_net(fc)
